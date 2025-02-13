@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pac-Man Game</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Pac-Man game styles */
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #000;
+            color: #fff;
+            margin: 0;
+            flex-direction: column;
+        }
+        canvas {
+            border: 1px solid #fff;
+        }
+        .counter {
+            margin-bottom: 10px;
+            font-size: 20px;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="counter" id="counter">0 / 0</div>
+    <canvas id="pacman" width="800" height="340"></canvas>
+    <script>
+        // Pac-Man game script
+        const canvas = document.getElementById('pacman');
+        const ctx = canvas.getContext('2d');
+        const counter = document.getElementById('counter');
+
+        // Pac-Man object
+        const pacman = {
+            x: 400,
+            y: 300,
+            radius: 10,
+            angle: 0.2,
+            speed: 1 ,
+            direction: 'right',
+            mouthOpen: true
+        };
+
+        // Ghosts array
+        const ghosts = [
+            { x: 60, y: 60, radius: 10, color: 'red', direction: 'right' },
+            { x: 740, y: 60, radius: 10, color: 'pink', direction: 'left' },
+            { x: 60, y: 280, radius: 10, color: 'cyan', direction: 'up' },
+            { x: 740, y: 280, radius: 10, color: 'orange', direction: 'down' }
+        ];
+
+        // Walls array
+        const walls = [
+            // Outer boundaries
+            { x: 0, y: 0, width: 800, height: 20 }, // Top boundary
+            { x: 0, y: 320, width: 800, height: 20 }, // Bottom boundary
+            { x: 0, y: 0, width: 20, height: 340 }, // Left boundary
+            { x: 780, y: 0, width: 20, height: 340 }, // Right boundary
+            // E
+            { x: 100, y: 100, width: 20, height: 160 }, // Vertical line of E
+            { x: 100, y: 100, width: 120, height: 20 }, // Top horizontal line of E
+            { x: 100, y: 180, width: 80, height: 20 }, // Middle horizontal line of E
+            { x: 100, y: 240, width: 120, height: 20 }, // Bottom horizontal line of E
+            // S
+            { x: 260, y: 100, width: 120, height: 20 }, // Top horizontal line of S
+            { x: 260, y: 100, width: 20, height: 80 }, // Top vertical line of S
+            { x: 260, y: 180, width: 120, height: 20 }, // Middle horizontal line of S
+            { x: 360, y: 180, width: 20, height: 80 }, // Bottom vertical line of S
+            { x: 260, y: 240, width: 120, height: 20 }, // Bottom horizontal line of S
+            // C
+            { x: 420, y: 100, width: 120, height: 20 }, // Top horizontal line of C
+            { x: 420, y: 100, width: 20, height: 160 }, // Vertical line of C
+            { x: 420, y: 240, width: 120, height: 20 }, // Bottom horizontal line of C
+            // F
+            { x: 580, y: 100, width: 20, height: 160 }, // Vertical line of F
+            { x: 580, y: 100, width: 120, height: 20 }, // Top horizontal line of F
+            { x: 580, y: 180, width: 80, height: 20 }, // Middle horizontal line of F
+        ];
+
+        // Initialize dots
+        let dots = [];
+        const initialDots = [];
+        for (let i = 20; i < 800; i += 20) {
+            for (let j = 20; j < 340; j += 20) {
+                if (!isColliding(i, j)) {
+                    initialDots.push({ x: i, y: j });
+                }
+            }
+        }
+        dots = [...initialDots];
+
+        let dotsEaten = 0;
+        const totalDots = dots.length;
+        counter.textContent = `${dotsEaten} / ${totalDots}`;
+
+        // Draw walls
+        function drawWalls() {
+            ctx.fillStyle = 'blue';
+            walls.forEach(wall => {
+                ctx.fillRect(wall.x, wall.y, wall.width, wall.height);
+            });
+        }
+
+        // Draw dots
+        function drawDots() {
+            ctx.fillStyle = 'white';
+            dots.forEach(dot => {
+                ctx.beginPath();
+                ctx.arc(dot.x, dot.y, 5, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.closePath();
+            });
+        }
+
+        // Draw Pac-Man
+        function drawPacman() {
+            ctx.beginPath();
+            const angleOffset = pacman.mouthOpen ? 0.2 : 0;
+            switch (pacman.direction) {
+                case 'right':
+                    ctx.arc(pacman.x, pacman.y, pacman.radius, angleOffset * Math.PI, (2 - angleOffset) * Math.PI);
+                    break;
+                case 'left':
+                    ctx.arc(pacman.x, pacman.y, pacman.radius, (1 + angleOffset) * Math.PI, (3 - angleOffset) * Math.PI);
+                    break;
+                case 'up':
+                    ctx.arc(pacman.x, pacman.y, pacman.radius, (1.5 + angleOffset) * Math.PI, (3.5 - angleOffset) * Math.PI);
+                    break;
+                case 'down':
+                    ctx.arc(pacman.x, pacman.y, pacman.radius, (0.5 + angleOffset) * Math.PI, (2.5 - angleOffset) * Math.PI);
+                    break;
+            }
+            ctx.lineTo(pacman.x, pacman.y);
+            ctx.fillStyle = 'yellow';
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        // Draw ghosts
+        function drawGhosts() {
+            ghosts.forEach(ghost => {
+                ctx.beginPath();
+                ctx.arc(ghost.x, ghost.y, ghost.radius, 0, Math.PI, true);
+                ctx.lineTo(ghost.x - ghost.radius, ghost.y + ghost.radius);
+                for (let i = 1; i < 7; i++) {
+                    ctx.lineTo(ghost.x - ghost.radius + (i * ghost.radius) / 3, ghost.y + ghost.radius - (i % 2) * ghost.radius / 3);
+                }
+                ctx.lineTo(ghost.x + ghost.radius, ghost.y + ghost.radius);
+                ctx.closePath();
+                ctx.fillStyle = ghost.color;
+                ctx.fill();
+
+                // Draw ghost eyes
+                ctx.beginPath();
+                ctx.arc(ghost.x - 3, ghost.y - 3, 2, 0, 2 * Math.PI);
+                ctx.arc(ghost.x + 3, ghost.y - 3, 2, 0, 2 * Math.PI);
+                ctx.fillStyle = 'white';
+                ctx.fill();
+
+                // Draw ghost pupils
+                ctx.beginPath();
+                ctx.arc(ghost.x - 3, ghost.y - 3, 1, 0, 2 * Math.PI);
+                ctx.arc(ghost.x + 3, ghost.y - 3, 1, 0, 2 * Math.PI);
+                ctx.fillStyle = 'black';
+                ctx.fill();
+            });
+        }
+
+        // Move Pac-Man
+        function movePacman() {
+            let newX = pacman.x;
+            let newY = pacman.y;
+
+            switch (pacman.direction) {
+                case 'right':
+                    newX += pacman.speed;
+                    break;
+                case 'left':
+                    newX -= pacman.speed;
+                    break;
+                case 'up':
+                    newY -= pacman.speed;
+                    break;
+                case 'down':
+                    newY += pacman.speed;
+                    break;
+            }
+
+            if (!isColliding(newX, newY)) {
+                pacman.x = newX;
+                pacman.y = newY;
+                eatDot(newX, newY);
+            }
+            pacman.mouthOpen = !pacman.mouthOpen;
+        }
+
+        // Move ghosts
+        function moveGhosts() {
+            ghosts.forEach(ghost => {
+                let newX = ghost.x;
+                let newY = ghost.y;
+
+                switch (ghost.direction) {
+                    case 'right':
+                        newX += 1;
+                        break;
+                    case 'left':
+                        newX -= 1;
+                        break;
+                    case 'up':
+                        newY -= 1;
+                        break;
+                    case 'down':
+                        newY += 1;
+                        break;
+                }
+
+                if (!isColliding(newX, newY)) {
+                    ghost.x = newX;
+                    ghost.y = newY;
+                } else {
+                    ghost.direction = getRandomDirection();
+                }
+
+                if (isCollidingWithPacman(ghost.x, ghost.y)) {
+                    resetGame();
+                }
+            });
+        }
+
+        // Get random direction for ghosts
+        function getRandomDirection() {
+            const directions = ['right', 'left', 'up', 'down'];
+            return directions[Math.floor(Math.random() * directions.length)];
+        }
+
+        // Check if position is colliding with walls
+        function isColliding(x, y) {
+            return walls.some(wall => {
+                return (
+                    x + pacman.radius > wall.x &&
+                    x - pacman.radius < wall.x + wall.width &&
+                    y + pacman.radius > wall.y &&
+                    y - pacman.radius < wall.y + wall.height
+                );
+            });
+        }
+
+        // Check if ghost is colliding with Pac-Man
+        function isCollidingWithPacman(x, y) {
+            return Math.hypot(pacman.x - x, pacman.y - y) < pacman.radius + 10;
+        }
+
+        // Check if Pac-Man is over a dot
+        function isOverDot(x, y) {
+            return dots.some(dot => Math.hypot(dot.x - x, dot.y - y) < pacman.radius);
+        }
+
+        // Eat dot if Pac-Man is over it
+        function eatDot(x, y) {
+            for (let i = 0; i < dots.length; i++) {
+                const dot = dots[i];
+                if (Math.hypot(dot.x - x, dot.y - y) < pacman.radius) {
+                    dots.splice(i, 1);
+                    dotsEaten++;
+                    counter.textContent = `${dotsEaten} / ${totalDots}`;
+                    break;
+                }
+            }
+        }
+
+        // Reset game when Pac-Man collides with a ghost
+        function resetGame() {
+            dots = [...initialDots];
+            dotsEaten = 0;
+            counter.textContent = `${dotsEaten} / ${totalDots}`;
+            pacman.x = 400;
+            pacman.y = 300;
+        }
+
+        // Update game state
+        function update() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawWalls();
+            drawDots();
+            movePacman();
+            moveGhosts();
+            drawPacman();
+            drawGhosts();
+            requestAnimationFrame(update);
+        }
+
+        // Handle keyboard input for Pac-Man movement
+        document.addEventListener('keydown', (e) => {
+            switch (e.key) {
+                case 'ArrowRight':
+                    pacman.direction = 'right';
+                    break;
+                case 'ArrowLeft':
+                    pacman.direction = 'left';
+                    break;
+                case 'ArrowUp':
+                    pacman.direction = 'up';
+                    break;
+                case 'ArrowDown':
+                    pacman.direction = 'down';
+                    break;
+            }
+        });
+
+        // Start the game loop
+        update();
+
+        // Move ghosts every 200 milliseconds
+        setInterval(moveGhosts, 200);
+    </script>
+</body>
+</html>

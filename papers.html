@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Latest Research Papers</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>Latest Research Papers</h1>
+        <nav>
+            <a href="index.html">Home</a>
+            <a href="pacman.html">Pac-Man Game</a>
+            <a href="papers.html" class="active">Research Papers</a>
+        </nav>
+    </header>
+
+    <main>
+        <section class="papers">
+            <h2>Recent Papers from arXiv</h2>
+            <div id="papers-list"><p>No papers found.</p></div>
+        </section>
+    </main>
+
+    <footer>
+        <p>© 2024 Elvira Fleury | Built with GitHub Pages</p>
+    </footer>
+
+    <script>
+        async function fetchPapers() {
+            const response = await fetch('http://export.arxiv.org/api/query?search_query=all:perfluoroalkyl+substances&start=0&max_results=5&sortBy=submittedDate&sortOrder=descending');
+            const data = await response.text();
+            const parser = new DOMParser();
+            const xml = parser.parseFromString(data, 'application/xml');
+            const entries = xml.querySelectorAll('entry');
+            const papersList = document.getElementById('papers-list');
+
+            entries.forEach(entry => {
+                const title = entry.querySelector('title').textContent;
+                const summary = entry.querySelector('summary').textContent;
+                const link = entry.querySelector('link').getAttribute('href');
+
+                const paperDiv = document.createElement('div');
+                paperDiv.classList.add('paper');
+
+                const paperTitle = document.createElement('h3');
+                paperTitle.textContent = title;
+
+                const paperSummary = document.createElement('p');
+                paperSummary.textContent = summary;
+
+                const paperLink = document.createElement('a');
+                paperLink.href = link;
+                paperLink.textContent = 'Read more';
+                paperLink.target = '_blank';
+
+                paperDiv.appendChild(paperTitle);
+                paperDiv.appendChild(paperSummary);
+                paperDiv.appendChild(paperLink);
+
+                papersList.appendChild(paperDiv);
+            });
+        }
+
+        fetchPapers();
+    </script>
+</body>
+</html>

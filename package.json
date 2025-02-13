@@ -1,0 +1,15 @@
+{
+  "name": "personal_website",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "update-papers": "node update-papers.js"
+  },
+  "dependencies": {
+    "node-fetch": "^2.6.1",
+    "jsdom": "^16.4.0"
+  },
+  "author": "",
+  "license": "ISC"
+}
