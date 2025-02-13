@@ -2,11 +2,14 @@ console.log("Starting arXiv query...");
 
 async function fetchPapers() {
     const query = 'all:IVF';
-    const url = `http://export.arxiv.org/api/query?search_query=${query}&start=0&max_results=5&sortBy=submittedDate&sortOrder=descending`;
+    const url = `https://export.arxiv.org/api/query?search_query=${query}&start=0&max_results=5&sortBy=submittedDate&sortOrder=descending`;
     console.log(`Query URL: ${url}`);
 
     try {
         const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const data = await response.text();
         console.log("Query successful. Data received:");
         console.log(data);
