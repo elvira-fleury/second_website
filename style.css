@@ -57,6 +57,7 @@ main {
     width: 200px;
     height: 200px;
     border-radius: 50%;
+    margin-top: -20px;
     margin-bottom: 1rem;
     border: 3px solid var(--accent);
     object-fit: cover; /* Add this line */
