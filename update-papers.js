@@ -1,11 +1,7 @@
-const fs = require('fs');
-const fetch = require('node-fetch');
-const { JSDOM } = require('jsdom');
-
 console.log("Starting arXiv query...");
 
 async function fetchPapers() {
-    const query = 'all:perfluoroalkyl+substances';
+    const query = 'all:IVF';
     const url = `http://export.arxiv.org/api/query?search_query=${query}&start=0&max_results=5&sortBy=submittedDate&sortOrder=descending`;
     console.log(`Query URL: ${url}`);
 
@@ -15,8 +11,9 @@ async function fetchPapers() {
         console.log("Query successful. Data received:");
         console.log(data);
 
-        const dom = new JSDOM(data, { contentType: 'application/xml' });
-        const entries = dom.window.document.querySelectorAll('entry');
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(data, "application/xml");
+        const entries = xmlDoc.querySelectorAll('entry');
 
         let papersHtml = '';
         if (entries.length === 0) {
@@ -24,36 +21,35 @@ async function fetchPapers() {
         } else {
             entries.forEach(entry => {
                 const title = entry.querySelector('title').textContent;
+                const authors = Array.from(entry.querySelectorAll('author > name')).map(author => author.textContent).join(', ');
                 const summary = entry.querySelector('summary').textContent;
-                const link = entry.querySelector('link').getAttribute('href');
+                const pdfLink = entry.querySelector('link[title="pdf"]').getAttribute('href');
 
                 papersHtml += `
                     <div class="paper">
                         <h3>${title}</h3>
+                        <p><strong>Authors:</strong> ${authors}</p>
                         <p>${summary}</p>
-                        <a href="${link}" target="_blank">Read more</a>
+                        <a href="${pdfLink}" target="_blank">Read PDF</a>
                     </div>
                 `;
             });
         }
 
-        console.log("Generated HTML for papers:");
-        console.log(papersHtml);
+        // Append the papersHtml to the papers-list element
+        const papersList = document.getElementById('papers-list');
+        if (papersList) {
+            papersList.innerHTML = papersHtml;
+        } else {
+            console.error("Element with id 'papers-list' not found.");
+        }
 
-        const htmlFilePath = './papers.html';
-        let htmlContent = fs.readFileSync(htmlFilePath, 'utf8');
-        console.log("Original HTML content:");
-        console.log(htmlContent);
-
-        htmlContent = htmlContent.replace(/<div id="papers-list">.*<\/div>/s, `<div id="papers-list">${papersHtml}</div>`);
-        console.log("Updated HTML content:");
-        console.log(htmlContent);
-
-        fs.writeFileSync(htmlFilePath, htmlContent, 'utf8');
-        console.log(`Updated ${htmlFilePath} with new papers.`);
     } catch (error) {
-        console.error("Error querying arXiv:", error);
+        console.error("Error fetching papers:", error);
     }
 }
 
-fetchPapers();
+// Call fetchPapers when the DOM is fully loaded
+document.addEventListener('DOMContentLoaded', () => {
+    fetchPapers();
+});

@@ -7,8 +7,8 @@
     "update-papers": "node update-papers.js"
   },
   "dependencies": {
-    "node-fetch": "^2.6.1",
-    "jsdom": "^16.4.0"
+    "jsdom": "^16.7.0",
+    "node-fetch": "^2.7.0"
   },
   "author": "",
   "license": "ISC"
